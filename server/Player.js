@@ -8,6 +8,7 @@ class Player {
         this.balance = 1000; // Starting balance
         this.speed = 200;
         this.radius = 15;
+        this.lastShoveTime = 0; // Track shove cooldown
     }
 
     updatePosition(x, y) {
@@ -38,6 +39,15 @@ class Player {
 
     canAffordBet(betAmount) {
         return this.balance >= betAmount;
+    }
+
+    canShove() {
+        const SHOVE_COOLDOWN = 3000; // 3 seconds
+        return (Date.now() - this.lastShoveTime) >= SHOVE_COOLDOWN;
+    }
+
+    setShoveTime() {
+        this.lastShoveTime = Date.now();
     }
 
     toJSON() {

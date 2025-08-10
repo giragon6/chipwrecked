@@ -14,6 +14,15 @@ app.use(express.static(path.join(__dirname, '../public')));
 // Create game manager instance
 const gameManager = new GameManager();
 
+// Set up spin completion callback
+gameManager.setSpinCompleteCallback((slotMachineId, result) => {
+    // Broadcast spin completion to all players
+    io.emit('slotMachineSpinComplete', {
+        slotMachineId: slotMachineId,
+        result: result
+    });
+});
+
 // Handle client connections
 io.on('connection', (socket) => {
     console.log('New player connected:', socket.id);
@@ -54,19 +63,87 @@ io.on('connection', (socket) => {
         const result = gameManager.spinSlotMachine(socket.id, data.slotMachineId);
         
         if (result.success) {
-            // Send result to the player
-            socket.emit('slotMachineResult', {
-                slotMachineId: data.slotMachineId,
-                symbols: result.symbols,
-                win: result.win,
-                winAmount: result.winAmount,
-                newBalance: result.newBalance
-            });
+            if (result.spinning) {
+                // Machine started spinning
+                socket.emit('slotMachineSpinStarted', {
+                    slotMachineId: data.slotMachineId,
+                    newBalance: result.newBalance
+                });
 
-            // Broadcast to other players that someone is using this slot machine
-            socket.broadcast.emit('slotMachineInUse', {
+                // Broadcast to other players that machine is spinning and update player balance
+                socket.broadcast.emit('slotMachineStateChanged', {
+                    slotMachineId: data.slotMachineId,
+                    state: 'spinning'
+                });
+                
+                // Broadcast balance update to all players
+                io.emit('playerBalanceUpdate', {
+                    playerId: socket.id,
+                    newBalance: result.newBalance
+                });
+            } else if (result.claimed) {
+                // Player claimed a result
+                socket.emit('slotMachineResult', {
+                    slotMachineId: data.slotMachineId,
+                    symbols: result.symbols,
+                    win: result.win,
+                    winAmount: result.winAmount,
+                    newBalance: result.newBalance,
+                    claimed: true
+                });
+
+                // Broadcast that machine is now available
+                socket.broadcast.emit('slotMachineStateChanged', {
+                    slotMachineId: data.slotMachineId,
+                    state: 'available'
+                });
+                
+                // Broadcast balance update to all players
+                io.emit('playerBalanceUpdate', {
+                    playerId: socket.id,
+                    newBalance: result.newBalance
+                });
+            }
+        } else {
+            // Send error to player
+            socket.emit('slotMachineError', {
                 slotMachineId: data.slotMachineId,
-                playerId: socket.id
+                error: result.error
+            });
+        }
+    });
+
+    // Handle player leaving slot machine
+    socket.on('playerLeftSlotMachine', (data) => {
+        gameManager.setSlotMachineInUse(data.slotMachineId, false);
+        
+        // Broadcast that slot machine is now available
+        socket.broadcast.emit('slotMachineInUse', {
+            slotMachineId: data.slotMachineId,
+            playerId: socket.id,
+            inUse: false
+        });
+    });
+
+    // Handle player shove
+    socket.on('playerShove', (data) => {
+        const result = gameManager.shovePlayer(socket.id, data.targetPlayerId, data.forceX, data.forceY);
+        
+        if (result.success) {
+            // Broadcast shove to all players
+            io.emit('playerShoved', {
+                shoverPlayerId: result.shoverPlayerId,
+                shovedPlayerId: result.shovedPlayerId,
+                forceX: result.forceX,
+                forceY: result.forceY,
+                newBalance: result.newBalance,
+                targetNewX: result.targetNewX,
+                targetNewY: result.targetNewY
+            });
+        } else {
+            // Send error to player
+            socket.emit('shoveError', {
+                error: result.error
             });
         }
     });
@@ -74,8 +151,17 @@ io.on('connection', (socket) => {
     // Handle player disconnect
     socket.on('disconnect', () => {
         console.log('Player disconnected:', socket.id);
+        
+        // Clear any slot machines this player was using
+        gameManager.clearPlayerSlotMachines(socket.id);
+        
+        // Remove player and broadcast
         gameManager.removePlayer(socket.id);
         socket.broadcast.emit('playerLeft', socket.id);
+        
+        // Broadcast that all slot machines are now available (in case player was using one)
+        const slotMachines = gameManager.getSlotMachines();
+        socket.broadcast.emit('slotMachinesUpdate', slotMachines);
     });
 });
 
