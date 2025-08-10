@@ -7,6 +7,21 @@ body {
     min-width: 100vw;
     min-height: 100vh;
     font-family: Arial, sans-serif;
+    overflow: scroll;
+}
+
+#customization-screen {
+    overflow-y: auto;
+    max-height: 100vh;
+    position: static;
+}
+
+body.customization-active,
+#game-container.customization-active {
+    overflow: auto !important;
+    position: static !important;
+    height: auto !important;
+    min-height: 100vh !important;
 }
 
 #game-container {
