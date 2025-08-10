@@ -26,7 +26,6 @@ class PlayerSprite extends Phaser.Physics.Arcade.Sprite {
         
         // Set physics body to be a circle
         this.body.setCircle(this.radius);
-        this.body.setCollideWorldBounds(true);
         
         // Set origin to center
         this.setOrigin(0.5, 0.5);

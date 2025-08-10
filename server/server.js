@@ -127,15 +127,14 @@ io.on('connection', (socket) => {
 
     // Handle player shove
     socket.on('playerShove', (data) => {
-        const result = gameManager.shovePlayer(socket.id, data.targetPlayerId, data.forceX, data.forceY);
+        const result = gameManager.shovePlayer(socket.id, data.targetPlayerId, data.shoveDirection.x, data.shoveDirection.y);
         
         if (result.success) {
             // Broadcast shove to all players
             io.emit('playerShoved', {
                 shoverPlayerId: result.shoverPlayerId,
                 shovedPlayerId: result.shovedPlayerId,
-                forceX: result.forceX,
-                forceY: result.forceY,
+                shoveDirection: result.shoveDirection,
                 newBalance: result.newBalance,
                 targetNewX: result.targetNewX,
                 targetNewY: result.targetNewY

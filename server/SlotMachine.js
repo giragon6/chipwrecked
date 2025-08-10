@@ -6,8 +6,15 @@ class SlotMachine {
         this.width = 40;
         this.height = 40;
         this.state = 'available'; // 'available', 'inUse', 'spinning', 'showingResult'
+        
+        // Randomize machine tier and properties
+        this.tier = this.generateMachineTier();
+        this.cost = this.tier.cost;
+        this.multiplier = this.tier.multiplier;
+        this.rareBonusChance = this.tier.rareBonusChance;
+        
         this.symbols = ['🍒', '🍋', '🔔', '⭐', '💎', '7️⃣'];
-        this.payouts = {
+        this.basePayouts = {
             '🍒': 20,
             '🍋': 30,
             '🔔': 50,
@@ -16,12 +23,56 @@ class SlotMachine {
             '7️⃣': 500
         };
         
+        // Calculate actual payouts based on tier multiplier
+        this.payouts = {};
+        Object.keys(this.basePayouts).forEach(symbol => {
+            this.payouts[symbol] = Math.round(this.basePayouts[symbol] * this.multiplier);
+        });
+        
         // Spinning state management
         this.currentSpinner = null; // Player ID who initiated the spin
         this.pendingResult = null;
         this.spinStartTime = null;
         this.spinTimeout = null;
         this.onSpinCompleteCallback = null; // Callback for when spin completes
+    }
+
+    generateMachineTier() {
+        const random = Math.random();
+        
+        if (random < 0.5) { // 50% chance - Basic machines
+            return {
+                name: 'Basic',
+                cost: 10,
+                multiplier: 1.0,
+                rareBonusChance: 0.05,
+                color: 0x3498db // Blue
+            };
+        } else if (random < 0.8) { // 30% chance - Premium machines
+            return {
+                name: 'Premium',
+                cost: 25,
+                multiplier: 1.8,
+                rareBonusChance: 0.1,
+                color: 0x9b59b6 // Purple
+            };
+        } else if (random < 0.95) { // 15% chance - Gold machines
+            return {
+                name: 'Gold',
+                cost: 50,
+                multiplier: 2.5,
+                rareBonusChance: 0.15,
+                color: 0xf1c40f // Gold
+            };
+        } else { // 5% chance - Diamond machines
+            return {
+                name: 'Diamond',
+                cost: 100,
+                multiplier: 4.0,
+                rareBonusChance: 0.25,
+                color: 0x1abc9c // Teal/Diamond
+            };
+        }
     }
 
     startSpin(playerId) {
@@ -59,18 +110,34 @@ class SlotMachine {
             symbols.push(this.symbols[randomIndex]);
         }
 
-        // Check for win (all three symbols match)
-        const win = symbols[0] === symbols[1] && symbols[1] === symbols[2];
+        // Check for win
+        const match1 = symbols[0] === symbols[1];
+        const match2 = symbols[1] === symbols[2];
+        const match3 = symbols[0] === symbols[2];
         let winAmount = 0;
 
-        if (win) {
+        if (match1 && match2 && match3) {
             winAmount = this.payouts[symbols[0]] || 10;
+            
+            // Apply rare bonus chance for higher-tier machines
+            if (Math.random() < this.rareBonusChance) {
+                winAmount *= 2; // Double the winnings for rare bonus
+            }
+        } else if (match1 || match2 || match3) {
+          winAmount = this.payouts[symbols[0]] || 10 * 0.001;
+            
+          // Apply rare bonus chance for higher-tier machines
+          if (Math.random() < this.rareBonusChance) {
+              winAmount *= 2; // Double the winnings for rare bonus
+          }
         }
 
         return {
             symbols: symbols,
-            win: win,
-            winAmount: winAmount
+            win: match1 || match2 || match3,
+            winAmount: winAmount,
+            tier: this.tier.name,
+            cost: this.cost
         };
     }
 
@@ -149,7 +216,10 @@ class SlotMachine {
             state: this.state,
             inUse: this.inUse,
             currentSpinner: this.currentSpinner,
-            pendingResult: this.state === 'showingResult' ? this.pendingResult : null
+            pendingResult: this.state === 'showingResult' ? this.pendingResult : null,
+            tier: this.tier,
+            cost: this.cost,
+            payouts: this.payouts
         };
         
         // If machine is spinning, check if it should be completed

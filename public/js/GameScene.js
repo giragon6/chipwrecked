@@ -12,9 +12,9 @@ class GameScene extends Phaser.Scene {
         this.isReady = false;
         this.shoveKey = null;
         this.lastShoveTime = 0;
+        this.lastClickTime = 0;
         this.SHOVE_COOLDOWN = 3000; // 3 seconds cooldown
         this.SHOVE_COST = 5; // $5 to shove
-        this.SHOVE_FORCE = 300; // Force applied to shoved player
         
         // Click-to-move properties
         this.targetPosition = null;
@@ -29,20 +29,18 @@ class GameScene extends Phaser.Scene {
     }
 
     preload() {
+        this.load.image('background', 'assets/shipdeck.svg');
         // No assets to preload since we're using graphics
     }
 
     create() {
         console.log('GameScene create() called');
         
-        // Set up larger world bounds (1600x1200 instead of 800x600)
         this.physics.world.setBounds(0, 0, 1600, 1200);
         this.cameras.main.setBounds(0, 0, 1600, 1200);
         
-        // Draw larger casino background
         this.drawCasino();
         
-        // Set up input
         this.cursors = this.input.keyboard.createCursorKeys();
         this.wasd = this.input.keyboard.addKeys('W,S,A,D');
         this.shoveKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -57,11 +55,6 @@ class GameScene extends Phaser.Scene {
         this.shoveCooldownDisplay = document.getElementById('shove-cooldown');
         this.shoveTimerDisplay = document.getElementById('shove-timer');
         this.leaderboardList = document.getElementById('leaderboard-list');
-        
-        // Set up mini-map
-        this.miniMapCanvas = document.getElementById('mini-map-canvas');
-        this.miniMapContext = this.miniMapCanvas.getContext('2d');
-        this.setupMiniMap();
         
         // Set up slot menu event listeners
         this.spinButton.addEventListener('click', () => {
@@ -92,67 +85,34 @@ class GameScene extends Phaser.Scene {
     drawCasino() {
         const casinoWidth = 1600;
         const casinoHeight = 1200;
-        
-        // Draw casino floor
+
+        // Draw casino floor (fill entire area)
         const floor = this.add.graphics();
         floor.fillStyle(0x8b4513); // Brown floor
-        floor.fillRect(50, 50, casinoWidth - 100, casinoHeight - 100);
-        
-        // Draw walls
+        floor.fillRect(0, 0, casinoWidth, casinoHeight);
+
+        // Draw walls (at the very edge)
         const walls = this.add.graphics();
         walls.lineStyle(8, 0x654321);
-        walls.strokeRect(50, 50, casinoWidth - 100, casinoHeight - 100);
-        
-        // Draw carpet patterns
+        walls.strokeRect(0, 0, casinoWidth, casinoHeight);
+
+        // Draw carpet patterns (cover full area)
         const carpet = this.add.graphics();
         carpet.lineStyle(2, 0x722f37, 0.6);
-        
-        // Vertical lines
-        for (let x = 100; x < casinoWidth - 50; x += 50) {
-            carpet.moveTo(x, 70);
-            carpet.lineTo(x, casinoHeight - 70);
-        }
-        
-        // Horizontal lines
-        for (let y = 100; y < casinoHeight - 50; y += 50) {
-            carpet.moveTo(70, y);
-            carpet.lineTo(casinoWidth - 70, y);
-        }
-        
-        carpet.strokePath();
-        
-        // Add some decorative elements
-        this.addCasinoDecorations();
-    }
 
-    addCasinoDecorations() {
-        const decorations = this.add.graphics();
-        decorations.lineStyle(4, 0x34495e);
-        
-        // Add some pillars
-        const pillarPositions = [
-            { x: 400, y: 300 },
-            { x: 1200, y: 300 },
-            { x: 400, y: 900 },
-            { x: 1200, y: 900 },
-            { x: 800, y: 200 },
-            { x: 800, y: 1000 }
-        ];
-        
-        pillarPositions.forEach(pos => {
-            decorations.fillStyle(0x34495e);
-            decorations.fillCircle(pos.x, pos.y, 25);
-            decorations.strokeCircle(pos.x, pos.y, 25);
-        });
-        
-        // Add entrance marker
-        decorations.fillStyle(0xf39c12);
-        decorations.fillRect(780, 40, 40, 20);
-        
-        // Add some carpet patterns in the center
-        decorations.lineStyle(3, 0xc0392b, 0.4);
-        decorations.strokeRect(600, 450, 400, 300);
-        decorations.strokeRect(620, 470, 360, 260);
+        // Vertical lines
+        for (let x = 50; x < casinoWidth; x += 50) {
+            carpet.moveTo(x, 0);
+            carpet.lineTo(x, casinoHeight);
+        }
+
+        // Horizontal lines
+        for (let y = 50; y < casinoHeight; y += 50) {
+            carpet.moveTo(0, y);
+            carpet.lineTo(casinoWidth, y);
+        }
+
+        carpet.strokePath();
     }
 
     setupSocketListeners() {
@@ -191,7 +151,7 @@ class GameScene extends Phaser.Scene {
             // Create slot machines and collision group
             this.slotMachineGroup = this.physics.add.staticGroup();
             data.slotMachines.forEach(machineData => {
-                const machine = new SlotMachineSprite(this, machineData.x, machineData.y, machineData.id);
+                const machine = new SlotMachineSprite(this, machineData.x, machineData.y, machineData.id, machineData);
                 
                 if (machineData.state === 'showingResult' && machineData.pendingResult) {
                     machine.setState('showingResult', { result: machineData.pendingResult });
@@ -274,8 +234,7 @@ class GameScene extends Phaser.Scene {
                 this.claimButton.disabled = false;
                 this.slotResult.innerHTML = `
                     <div>${data.result.symbols.join(' ')}</div>
-                    ${data.result.win ? `<div style="color: #27ae60;">WIN! +$${data.result.winAmount}</div>` : '<div style="color: #e74c3c;">No win</div>'}
-                    <div style="color: #f39c12; font-size: 12px;">Click claim to collect!</div>
+                    ${data.result.win ? `<div style="color: #27ae60;">WIN! +$${data.result.winAmount}</div>` : '<div style="color: #e74c3c;">No win :(</div>'}
                 `;
             }
         });
@@ -350,10 +309,7 @@ class GameScene extends Phaser.Scene {
             console.log('Player shoved:', data);
             const shovedPlayer = this.players.get(data.shovedPlayerId);
             if (shovedPlayer) {
-                // Apply shove force
-                shovedPlayer.body.setVelocity(data.forceX, data.forceY);
-                
-                // Update the player's position to match server
+                // Directly set the new position from server
                 shovedPlayer.setPosition(data.targetNewX, data.targetNewY);
                 
                 // Create shove effect
@@ -397,59 +353,62 @@ class GameScene extends Phaser.Scene {
         let velocityY = 0;
         const speed = this.moveSpeed;
         
-        // Check if using touch controls
-        const usingTouch = window.touchMovement && (
-            window.touchMovement.up || window.touchMovement.down || 
-            window.touchMovement.left || window.touchMovement.right
-        );
+        // Keyboard movement (takes priority over click-to-move)
+        let keyboardMovement = false;
+        if (this.cursors.left.isDown || this.wasd.A.isDown) {
+            velocityX = -speed;
+            keyboardMovement = true;
+        }
+        if (this.cursors.right.isDown || this.wasd.D.isDown) {
+            velocityX = speed;
+            keyboardMovement = true;
+        }
+        if (this.cursors.up.isDown || this.wasd.W.isDown) {
+            velocityY = -speed;
+            keyboardMovement = true;
+        }
+        if (this.cursors.down.isDown || this.wasd.S.isDown) {
+            velocityY = speed;
+            keyboardMovement = true;
+        }
         
-        if (!usingTouch) {
-            // Keyboard movement
-            if (this.cursors.left.isDown || this.wasd.A.isDown) {
-                velocityX = -speed;
-            }
-            if (this.cursors.right.isDown || this.wasd.D.isDown) {
-                velocityX = speed;
-            }
-            if (this.cursors.up.isDown || this.wasd.W.isDown) {
-                velocityY = -speed;
-            }
-            if (this.cursors.down.isDown || this.wasd.S.isDown) {
-                velocityY = speed;
-            }
+        // If using keyboard, cancel click-to-move
+        if (keyboardMovement && this.targetPosition) {
+            this.targetPosition = null;
+            this.hideClickIndicator();
+        }
+        
+        // Click-to-move (only if no keyboard input)
+        if (!keyboardMovement && this.targetPosition) {
+            const distance = Phaser.Math.Distance.Between(
+                this.currentPlayer.x, this.currentPlayer.y,
+                this.targetPosition.x, this.targetPosition.y
+            );
             
-            // Click-to-move behavior
-            if (this.targetPosition && !this.isMobile) {
-                const distance = Phaser.Math.Distance.Between(
+            if (distance > 5) {
+                const angle = Phaser.Math.Angle.Between(
                     this.currentPlayer.x, this.currentPlayer.y,
                     this.targetPosition.x, this.targetPosition.y
                 );
                 
-                if (distance > 5) {
-                    const angle = Phaser.Math.Angle.Between(
-                        this.currentPlayer.x, this.currentPlayer.y,
-                        this.targetPosition.x, this.targetPosition.y
-                    );
-                    
-                    velocityX = Math.cos(angle) * speed;
-                    velocityY = Math.sin(angle) * speed;
-                } else {
-                    this.targetPosition = null;
-                    this.hideClickIndicator();
-                }
+                velocityX = Math.cos(angle) * speed;
+                velocityY = Math.sin(angle) * speed;
+            } else {
+                this.targetPosition = null;
+                this.hideClickIndicator();
             }
-            
-            // Set player velocity (physics will handle collision)
-            this.currentPlayer.body.setVelocity(velocityX, velocityY);
-            
-            // Send position update to server if player moved
-            if (velocityX !== 0 || velocityY !== 0) {
-                if (this.socket) {
-                    this.socket.emit('playerMove', {
-                        x: this.currentPlayer.x,
-                        y: this.currentPlayer.y
-                    });
-                }
+        }
+        
+        // Apply movement
+        this.currentPlayer.body.setVelocity(velocityX, velocityY);
+        
+        // Send position update to server if player moved
+        if (velocityX !== 0 || velocityY !== 0) {
+            if (this.socket) {
+                this.socket.emit('playerMove', {
+                    x: this.currentPlayer.x,
+                    y: this.currentPlayer.y
+                });
             }
         }
         
@@ -463,59 +422,6 @@ class GameScene extends Phaser.Scene {
         
         // Update shove cooldown display
         this.updateShoveCooldownDisplay();
-        
-        // Update mini-map
-        this.updateMiniMap();
-    }
-
-    setupMiniMap() {
-        // Draw the static casino layout on mini-map
-        this.miniMapContext.fillStyle = '#8b4513';
-        this.miniMapContext.fillRect(0, 0, 160, 120);
-        
-        // Draw walls
-        this.miniMapContext.strokeStyle = '#654321';
-        this.miniMapContext.lineWidth = 2;
-        this.miniMapContext.strokeRect(5, 5, 150, 110);
-    }
-
-    updateMiniMap() {
-        if (!this.currentPlayer) return;
-        
-        // Clear previous frame (but keep the static background)
-        this.setupMiniMap();
-        
-        // Draw current player position
-        const playerX = (this.currentPlayer.x / 1600) * 160;
-        const playerY = (this.currentPlayer.y / 1200) * 120;
-        
-        // Draw player as a blue dot
-        this.miniMapContext.fillStyle = '#3498db';
-        this.miniMapContext.beginPath();
-        this.miniMapContext.arc(playerX, playerY, 3, 0, 2 * Math.PI);
-        this.miniMapContext.fill();
-        
-        // Draw other players as red dots
-        this.players.forEach((player, playerId) => {
-            if (playerId !== this.currentPlayer.playerId) {
-                const otherX = (player.x / 1600) * 160;
-                const otherY = (player.y / 1200) * 120;
-                
-                this.miniMapContext.fillStyle = '#e74c3c';
-                this.miniMapContext.beginPath();
-                this.miniMapContext.arc(otherX, otherY, 2, 0, 2 * Math.PI);
-                this.miniMapContext.fill();
-            }
-        });
-        
-        // Draw slot machines as small green squares
-        this.slotMachines.forEach((machine) => {
-            const machineX = (machine.x / 1600) * 160;
-            const machineY = (machine.y / 1200) * 120;
-            
-            this.miniMapContext.fillStyle = machine.inUse ? '#f39c12' : '#27ae60';
-            this.miniMapContext.fillRect(machineX - 1, machineY - 1, 2, 2);
-        });
     }
 
     checkNearbySlotMachines() {
@@ -564,6 +470,30 @@ class GameScene extends Phaser.Scene {
         this.slotMenu.style.display = 'block';
         this.slotResult.innerHTML = '';
         
+        // Update slot info with tier and cost
+        const slotTitle = document.getElementById('slot-title');
+        const slotTierInfo = document.getElementById('slot-tier-info');
+        const slotCost = document.getElementById('slot-cost');
+        
+        if (slotTitle) {
+            slotTitle.textContent = `${machine.tier.name} Slot Machine`;
+        }
+        
+        if (slotTierInfo) {
+            const tierColors = {
+                'Basic': '#3498db',
+                'Premium': '#9b59b6', 
+                'Gold': '#f1c40f',
+                'Diamond': '#1abc9c'
+            };
+            slotTierInfo.innerHTML = `<span style="color: ${tierColors[machine.tier.name] || '#ffffff'}; font-weight: bold;">${machine.tier.name} Tier</span>`;
+        }
+        
+        if (slotCost) {
+            // Always allow spinning regardless of balance
+            slotCost.innerHTML = `Cost: <span style="color: #f1c40f; font-weight: bold;">$${machine.cost}</span> per spin`;
+        }
+        
         if (machine.state === 'showingResult') {
             // Machine has a result ready to claim
             this.spinButton.style.display = 'none';
@@ -577,10 +507,10 @@ class GameScene extends Phaser.Scene {
                 `;
             }
         } else {
-            // Machine is available for new spin
+            // Machine is available for new spin - always allow spinning
             this.spinButton.style.display = 'block';
             this.claimButton.style.display = 'none';
-            this.spinButton.disabled = false;
+            this.spinButton.disabled = false; // Always enable spinning
             this.spinButton.textContent = 'Spin!';
         }
     }
@@ -598,7 +528,7 @@ class GameScene extends Phaser.Scene {
     }
 
     spinSlotMachine() {
-        if (this.currentSlotMachineId === null || this.balance < 10) {
+        if (this.currentSlotMachineId === null) {
             return;
         }
         
@@ -620,7 +550,6 @@ class GameScene extends Phaser.Scene {
         
         // Disable claim button
         this.claimButton.disabled = true;
-        this.claimButton.textContent = 'Claiming...';
         
         // Send claim request to server (same as spin for showing result state)
         this.socket.emit('slotMachineSpin', {
@@ -629,7 +558,8 @@ class GameScene extends Phaser.Scene {
     }
 
     updateBalanceDisplay() {
-        this.balanceDisplay.textContent = `Balance: $${this.balance}`;
+        const balanceColor = this.balance < 0 ? '#e74c3c' : '#ffffff'; // Red for negative, white for positive
+        this.balanceDisplay.innerHTML = `Balance: <span style="color: ${balanceColor}; font-weight: ${this.balance < 0 ? 'bold' : 'normal'};">$${this.balance}</span>`;
         this.updateLeaderboard();
     }
 
@@ -681,6 +611,12 @@ class GameScene extends Phaser.Scene {
             balanceSpan.className = 'leaderboard-balance';
             balanceSpan.textContent = `$${playerData.balance}`;
             
+            // Style negative balances in red
+            if (playerData.balance < 0) {
+                balanceSpan.style.color = '#e74c3c';
+                balanceSpan.style.fontWeight = 'bold';
+            }
+            
             entry.appendChild(rankSpan);
             entry.appendChild(nameSpan);
             entry.appendChild(balanceSpan);
@@ -711,11 +647,7 @@ class GameScene extends Phaser.Scene {
             return;
         }
         
-        // Check if player has enough money
-        if (this.balance < this.SHOVE_COST) {
-            console.log('Not enough money to shove');
-            return;
-        }
+        // Remove balance check - allow negative balance
         
         // Find nearest player within shove range
         const SHOVE_RANGE = 80; // pixels
@@ -749,8 +681,10 @@ class GameScene extends Phaser.Scene {
                 // Send shove request to server
                 this.socket.emit('playerShove', {
                     targetPlayerId: nearestPlayer.playerId,
-                    forceX: normalizedX * this.SHOVE_FORCE,
-                    forceY: normalizedY * this.SHOVE_FORCE
+                    shoveDirection: {
+                        x: normalizedX,
+                        y: normalizedY
+                    }
                 });
                 
                 this.lastShoveTime = currentTime;
@@ -801,17 +735,39 @@ class GameScene extends Phaser.Scene {
     }
 
     handlePointerDown(pointer) {
-        // Only use click-to-move on desktop or when not using touch controls
-        if (this.isMobile || !this.currentPlayer) return;
-        
+      if (!this.currentPlayer) return;
+      
         // Don't move if clicking on UI elements
         if (this.slotMenu.style.display === 'block') return;
+        
+        const currentTime = Date.now();
+        const timeSinceClick = currentTime - this.lastClickTime;
+        const doubleClick = timeSinceClick < 500;
+        
+        console.log(timeSinceClick)
+        this.lastClickTime = currentTime;
+        if (doubleClick) { 
+          this.attemptShove();
+          return;
+        };
         
         // Convert pointer position to world coordinates
         const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
         
+        // Set move target (works on both desktop and mobile now)
         this.targetPosition = { x: worldPoint.x, y: worldPoint.y };
         this.showClickIndicator(worldPoint.x, worldPoint.y);
+    }
+
+    checkPlayerClick(worldX, worldY) {
+        // Check if click position is near any player
+        for (let [playerId, player] of this.players) {
+            const distance = Phaser.Math.Distance.Between(worldX, worldY, player.x, player.y);
+            if (distance <= 40) { // 40 pixel radius for clicking on players
+                return player;
+            }
+        }
+        return null;
     }
 
     showClickIndicator(x, y) {
@@ -842,4 +798,4 @@ class GameScene extends Phaser.Scene {
             indicator.style.display = 'none';
         }
     }
-}
+  }

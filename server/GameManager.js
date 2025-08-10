@@ -118,9 +118,7 @@ class GameManager {
             return { success: false, error: 'Player or machine not found' };
         }
 
-        if (player.balance < 10) {
-            return { success: false, error: 'Insufficient balance' };
-        }
+        // Remove balance check - allow negative balance
 
         // Check if machine can be spun
         if (!machine.canInteract()) {
@@ -146,8 +144,8 @@ class GameManager {
             }
         }
 
-        // Deduct bet amount for new spin
-        player.balance -= 10;
+        // Deduct bet amount for new spin - allow going negative
+        player.balance -= machine.cost;
 
         // Start spinning
         const spinResult = machine.startSpin(playerId);
@@ -156,7 +154,8 @@ class GameManager {
             return {
                 success: true,
                 spinning: true,
-                newBalance: player.balance
+                newBalance: player.balance,
+                cost: machine.cost
             };
         }
 
@@ -209,10 +208,7 @@ class GameManager {
             return { success: false, error: 'Player not found' };
         }
 
-        // Check if shover can afford it
-        if (!shover.canAffordBet(5)) {
-            return { success: false, error: 'Insufficient balance' };
-        }
+        // Remove balance check - allow negative balance
 
         // Check cooldown
         if (!shover.canShove()) {
@@ -229,15 +225,31 @@ class GameManager {
             return { success: false, error: 'Target too far away' };
         }
 
-        // Deduct cost and set cooldown
+        // Deduct cost and set cooldown - allow negative balance
         shover.deductBalance(5);
         shover.setShoveTime();
 
-        // Calculate new position for shoved player
-        const newX = Math.max(70, Math.min(1530, target.x + forceX * 0.3)); // Keep within bounds
-        const newY = Math.max(70, Math.min(1130, target.y + forceY * 0.3)); // Keep within bounds
+        // Calculate shove direction (normalized)
+        const dx = target.x - shover.x;
+        const dy = target.y - shover.y;
+        const length = Math.sqrt(dx * dx + dy * dy);
         
-        // Update target position
+        // Fixed shove distance
+        const SHOVE_DISTANCE = 80;
+        
+        let shoveDirectionX = 1; // Default push right
+        let shoveDirectionY = 0;
+        
+        if (length > 0) {
+            shoveDirectionX = dx / length;
+            shoveDirectionY = dy / length;
+        }
+        
+        // Calculate new position for shoved player (fixed offset)
+        const newX = Math.max(70, Math.min(1530, target.x + shoveDirectionX * SHOVE_DISTANCE));
+        const newY = Math.max(70, Math.min(1130, target.y + shoveDirectionY * SHOVE_DISTANCE));
+        
+        // Update target position on server
         target.updatePosition(newX, newY);
 
         // Check if target was near any slot machines and remove them
@@ -258,11 +270,13 @@ class GameManager {
             success: true,
             shoverPlayerId: shoverPlayerId,
             shovedPlayerId: targetPlayerId,
-            forceX: forceX,
-            forceY: forceY,
             newBalance: shover.balance,
             targetNewX: newX,
-            targetNewY: newY
+            targetNewY: newY,
+            shoveDirection: {
+                x: shoveDirectionX,
+                y: shoveDirectionY
+            }
         };
     }
 }

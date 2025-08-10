@@ -1,13 +1,17 @@
 class SlotMachineSprite extends Phaser.Physics.Arcade.Sprite {
-    constructor(scene, x, y, id) {
+    constructor(scene, x, y, id, machineData = {}) {
+        // Get tier information or default to basic
+        const tier = machineData.tier || { name: 'Basic', color: 0x3498db, cost: 10 };
+        const cost = machineData.cost || 10;
+        
         // Create unique texture keys for different states
         const availableTextureKey = `slotmachine_available_${id}`;
         const inUseTextureKey = `slotmachine_inuse_${id}`;
         const spinningTextureKey = `slotmachine_spinning_${id}`;
         
-        // Create textures if they don't exist
+        // Create textures with tier color if they don't exist
         if (!scene.textures.exists(availableTextureKey)) {
-            SlotMachineSprite.createSlotMachineTexture(scene, availableTextureKey, 0x27ae60); // Green
+            SlotMachineSprite.createSlotMachineTexture(scene, availableTextureKey, tier.color); // Tier color
         }
         if (!scene.textures.exists(inUseTextureKey)) {
             SlotMachineSprite.createSlotMachineTexture(scene, inUseTextureKey, 0xf39c12); // Orange
@@ -24,6 +28,8 @@ class SlotMachineSprite extends Phaser.Physics.Arcade.Sprite {
         this.width = 40;
         this.height = 40;
         this.state = 'available'; // 'available', 'inUse', 'spinning', 'showingResult'
+        this.tier = tier;
+        this.cost = cost;
         this.availableTextureKey = availableTextureKey;
         this.inUseTextureKey = inUseTextureKey;
         this.spinningTextureKey = spinningTextureKey;
@@ -58,10 +64,37 @@ class SlotMachineSprite extends Phaser.Physics.Arcade.Sprite {
         });
         this.symbolsText.setOrigin(0.5, 0.5);
         this.symbolsText.setVisible(false);
+        
+        // Create cost display
+        this.costText = scene.add.text(this.x, this.y + 25, `$${this.cost}`, {
+            fontSize: '12px',
+            fill: '#f1c40f',
+            align: 'center',
+            stroke: '#000000',
+            strokeThickness: 2,
+            fontWeight: 'bold'
+        });
+        this.costText.setOrigin(0.5, 0.5);
+        
+        // Create tier indicator
+        this.tierText = scene.add.text(this.x, this.y - 25, tier.name, {
+            fontSize: '8px',
+            fill: '#ffffff',
+            align: 'center',
+            stroke: '#000000',
+            strokeThickness: 1
+        });
+        this.tierText.setOrigin(0.5, 0.5);
+
+        //idek dude
+        this.setTexture(this.availableTextureKey);
+        this.stopSpinAnimation();
+        this.symbolsText.setVisible(false);
+        this.currentResult = null;
     }
 
     static createSlotMachineTexture(scene, textureKey, bodyColor) {
-        const size = 64; // Texture size (power of 2)
+        const size = 64; // Texture size
         const graphics = scene.add.graphics();
         
         // Draw slot machine body
@@ -170,9 +203,18 @@ class SlotMachineSprite extends Phaser.Physics.Arcade.Sprite {
             this.spinAnimation = null;
         }
         
-        // Stop pulsing effect
+        // Stop pulsing effect and preserve position
         this.scene.tweens.killTweensOf(this);
+        
+        // Store current position before resetting scale
+        const currentX = this.x;
+        const currentY = this.y;
+        
+        // Reset scale
         this.setScale(1, 1);
+        
+        // Restore position to prevent drift
+        this.setPosition(currentX, currentY);
     }
 
     showResult(result) {
@@ -223,6 +265,14 @@ class SlotMachineSprite extends Phaser.Physics.Arcade.Sprite {
         
         if (this.symbolsText) {
             this.symbolsText.destroy();
+        }
+        
+        if (this.costText) {
+            this.costText.destroy();
+        }
+        
+        if (this.tierText) {
+            this.tierText.destroy();
         }
         
         // Clean up textures
