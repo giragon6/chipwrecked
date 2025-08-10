@@ -18,29 +18,29 @@ class GameManager {
         const spacing = 200;
         
         // Top wall slot machines
-        for (let x = 150; x < casinoWidth - 150; x += spacing) {
+        for (let x = 350; x < casinoWidth - 200; x += spacing) {
             machinePositions.push({ x: x, y: 120 });
         }
         
         // Bottom wall slot machines
-        for (let x = 150; x < casinoWidth - 150; x += spacing) {
-            machinePositions.push({ x: x, y: casinoHeight - 120 });
+        for (let x = 350; x < casinoWidth - 200; x += spacing) {
+            machinePositions.push({ x: x, y: casinoHeight - 220 });
         }
         
         // Left wall slot machines
         for (let y = 200; y < casinoHeight - 200; y += spacing) {
-            machinePositions.push({ x: 120, y: y });
+            machinePositions.push({ x: 300, y: y });
         }
         
         // Right wall slot machines
         for (let y = 200; y < casinoHeight - 200; y += spacing) {
-            machinePositions.push({ x: casinoWidth - 120, y: y });
+            machinePositions.push({ x: casinoWidth - 300, y: y });
         }
         
         // Interior clusters of slot machines
         const clusterPositions = [
-            { centerX: casinoWidth / 2 - 200, centerY: casinoHeight / 2, rows: 3, cols: 2 },
-            { centerX: casinoWidth / 2 + 200, centerY: casinoHeight / 2, rows: 3, cols: 2 },
+            { centerX: casinoWidth / 2 - 150, centerY: casinoHeight / 2, rows: 3, cols: 1 },
+            { centerX: casinoWidth / 2 + 150, centerY: casinoHeight / 2, rows: 3, cols: 1 },
         ];
         
         // Add cluster machines

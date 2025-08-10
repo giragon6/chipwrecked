@@ -1,8 +1,7 @@
 body {
     margin: 0;
     padding: 0;
-    background-image: url('assets/ocean.jpg');
-    background
+    background-color: #292929;
     width: 100vw;
     height: 100vh;
     min-width: 100vw;
@@ -115,6 +114,9 @@ body {
 
 .screen-content {
     padding: 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 .customization-form {
@@ -426,6 +428,12 @@ body {
 
 .disconnected {
     color: #e74c3c !important;
+}
+
+.header-img {
+  margin-bottom: 4vh;
+  height: 15vh;
+  width: auto;
 }
 
 #click-to-move-indicator {

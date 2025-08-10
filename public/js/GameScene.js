@@ -14,7 +14,7 @@ class GameScene extends Phaser.Scene {
         this.lastShoveTime = 0;
         this.lastClickTime = 0;
         this.SHOVE_COOLDOWN = 3000; // 3 seconds cooldown
-        this.SHOVE_COST = 5; // $5 to shove
+        this.SHOVE_COST = 50; // $5 to shove
         
         // Click-to-move properties
         this.targetPosition = null;
@@ -30,6 +30,7 @@ class GameScene extends Phaser.Scene {
 
     preload() {
         this.load.image('background', 'assets/shipdeck2.svg');
+        this.load.image('ocean-background', 'assets/oceanbackground.svg');
         this.load.audio('letsgo', 'assets/audio/gamblecore-letsgo.mp3')
         this.load.audio('awdangit', 'assets/audio/gamblecore-awdangit.mp3')
         // Note: winning sound file needs to be added to assets/audio/
@@ -85,7 +86,8 @@ class GameScene extends Phaser.Scene {
         this.isReady = true;
         console.log('GameScene is ready');
 
-        this.add.image(0, 0, 'background').setOrigin(0.25,0);
+        this.add.image(0, 0, 'ocean-background').setOrigin(0, 0);
+        this.add.image(0, 0, 'background').setOrigin(0.15,0).setScale(0.8);
     }
 
     drawCasino() {
