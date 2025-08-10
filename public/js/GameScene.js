@@ -29,8 +29,12 @@ class GameScene extends Phaser.Scene {
     }
 
     preload() {
-        this.load.image('background', 'assets/shipdeck.svg');
-        // No assets to preload since we're using graphics
+        this.load.image('background', 'assets/shipdeck2.svg');
+        this.load.audio('letsgo', 'assets/audio/gamblecore-letsgo.mp3')
+        this.load.audio('awdangit', 'assets/audio/gamblecore-awdangit.mp3')
+        // Note: winning sound file needs to be added to assets/audio/
+        // For now, we'll use letsgo as a fallback
+        this.load.audio('winning', ['assets/audio/gamblecore-winning.mp3', 'assets/audio/gamblecore-letsgo.mp3'])
     }
 
     create() {
@@ -80,39 +84,41 @@ class GameScene extends Phaser.Scene {
         // Mark scene as ready
         this.isReady = true;
         console.log('GameScene is ready');
+
+        this.add.image(0, 0, 'background').setOrigin(0.25,0);
     }
 
     drawCasino() {
         const casinoWidth = 1600;
         const casinoHeight = 1200;
 
-        // Draw casino floor (fill entire area)
-        const floor = this.add.graphics();
-        floor.fillStyle(0x8b4513); // Brown floor
-        floor.fillRect(0, 0, casinoWidth, casinoHeight);
+        // // Draw casino floor (fill entire area)
+        // const floor = this.add.graphics();
+        // floor.fillStyle(0x8b4513); // Brown floor
+        // floor.fillRect(0, 0, casinoWidth, casinoHeight);
 
-        // Draw walls (at the very edge)
-        const walls = this.add.graphics();
-        walls.lineStyle(8, 0x654321);
-        walls.strokeRect(0, 0, casinoWidth, casinoHeight);
+        // // Draw walls (at the very edge)
+        // const walls = this.add.graphics();
+        // walls.lineStyle(8, 0x654321);
+        // walls.strokeRect(0, 0, casinoWidth, casinoHeight);
 
-        // Draw carpet patterns (cover full area)
-        const carpet = this.add.graphics();
-        carpet.lineStyle(2, 0x722f37, 0.6);
+        // // Draw carpet patterns (cover full area)
+        // const carpet = this.add.graphics();
+        // carpet.lineStyle(2, 0x722f37, 0.6);
 
-        // Vertical lines
-        for (let x = 50; x < casinoWidth; x += 50) {
-            carpet.moveTo(x, 0);
-            carpet.lineTo(x, casinoHeight);
-        }
+        // // Vertical lines
+        // for (let x = 50; x < casinoWidth; x += 50) {
+        //     carpet.moveTo(x, 0);
+        //     carpet.lineTo(x, casinoHeight);
+        // }
 
-        // Horizontal lines
-        for (let y = 50; y < casinoHeight; y += 50) {
-            carpet.moveTo(0, y);
-            carpet.lineTo(casinoWidth, y);
-        }
+        // // Horizontal lines
+        // for (let y = 50; y < casinoHeight; y += 50) {
+        //     carpet.moveTo(0, y);
+        //     carpet.lineTo(casinoWidth, y);
+        // }
 
-        carpet.strokePath();
+        // carpet.strokePath();
     }
 
     setupSocketListeners() {
@@ -342,6 +348,11 @@ class GameScene extends Phaser.Scene {
             
             // Update leaderboard
             this.updateLeaderboard();
+        });
+
+        // Handle spatial audio events
+        this.socket.on('playSpatialAudio', (data) => {
+            this.playSpatialAudio(data.sound, data.position);
         });
     }
 
@@ -796,6 +807,47 @@ class GameScene extends Phaser.Scene {
         const indicator = document.getElementById('click-to-move-indicator');
         if (indicator) {
             indicator.style.display = 'none';
+        }
+    }
+
+    playSpatialAudio(soundKey, position) {
+        if (!this.currentPlayer) return;
+        
+        // Calculate distance between player and sound source
+        const distance = Phaser.Math.Distance.Between(
+            this.currentPlayer.x, this.currentPlayer.y,
+            position.x, position.y
+        );
+        
+        // Maximum hearing distance (beyond this, sound volume is 0)
+        const MAX_DISTANCE = 400;
+        
+        // Calculate volume based on distance (1.0 at source, 0.0 at max distance)
+        let volume = Math.max(0, 1 - (distance / MAX_DISTANCE));
+        
+        // Apply volume curve for more realistic falloff
+        volume = Math.pow(volume, 2); // Exponential falloff
+        
+        // Only play if volume is above threshold
+        if (volume > 0.05) {
+            // Calculate pan based on horizontal position relative to player
+            const deltaX = position.x - this.currentPlayer.x;
+            const pan = Math.max(-1, Math.min(1, deltaX / 200)); // Pan range: -1 to 1
+            
+            // Play the sound with spatial properties
+            const sound = this.sound.add(soundKey, {
+                volume: volume * 0.7, // Scale down overall volume
+                pan: pan
+            });
+            
+            sound.play();
+            
+            // Clean up the sound when it finishes
+            sound.once('complete', () => {
+                sound.destroy();
+            });
+            
+            console.log(`Playing ${soundKey} at distance ${Math.round(distance)} with volume ${volume.toFixed(2)} and pan ${pan.toFixed(2)}`);
         }
     }
   }

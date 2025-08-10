@@ -15,8 +15,7 @@ class GameManager {
         // Casino dimensions: 1600x1200 (much larger than 800x600 viewport)
         const casinoWidth = 1600;
         const casinoHeight = 1200;
-        const machineSize = 50;
-        const spacing = 80;
+        const spacing = 200;
         
         // Top wall slot machines
         for (let x = 150; x < casinoWidth - 150; x += spacing) {
@@ -40,15 +39,6 @@ class GameManager {
         
         // Interior clusters of slot machines
         const clusterPositions = [
-            // Top-left cluster
-            { centerX: 300, centerY: 300, rows: 2, cols: 3 },
-            // Top-right cluster
-            { centerX: casinoWidth - 300, centerY: 300, rows: 2, cols: 3 },
-            // Bottom-left cluster
-            { centerX: 300, centerY: casinoHeight - 300, rows: 2, cols: 3 },
-            // Bottom-right cluster
-            { centerX: casinoWidth - 300, centerY: casinoHeight - 300, rows: 2, cols: 3 },
-            // Center clusters
             { centerX: casinoWidth / 2 - 200, centerY: casinoHeight / 2, rows: 3, cols: 2 },
             { centerX: casinoWidth / 2 + 200, centerY: casinoHeight / 2, rows: 3, cols: 2 },
         ];

@@ -113,28 +113,20 @@ class SlotMachine {
         // Check for win
         const match1 = symbols[0] === symbols[1];
         const match2 = symbols[1] === symbols[2];
-        const match3 = symbols[0] === symbols[2];
         let winAmount = 0;
 
-        if (match1 && match2 && match3) {
+        if (match1 && match2) {
             winAmount = this.payouts[symbols[0]] || 10;
             
             // Apply rare bonus chance for higher-tier machines
             if (Math.random() < this.rareBonusChance) {
                 winAmount *= 2; // Double the winnings for rare bonus
             }
-        } else if (match1 || match2 || match3) {
-          winAmount = this.payouts[symbols[0]] || 10 * 0.001;
-            
-          // Apply rare bonus chance for higher-tier machines
-          if (Math.random() < this.rareBonusChance) {
-              winAmount *= 2; // Double the winnings for rare bonus
-          }
         }
 
         return {
             symbols: symbols,
-            win: match1 || match2 || match3,
+            win: match1 && match2,
             winAmount: winAmount,
             tier: this.tier.name,
             cost: this.cost

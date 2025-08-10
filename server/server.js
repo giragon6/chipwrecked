@@ -16,11 +16,30 @@ const gameManager = new GameManager();
 
 // Set up spin completion callback
 gameManager.setSpinCompleteCallback((slotMachineId, result) => {
+    // Get the slot machine position for spatial audio
+    const machine = gameManager.slotMachines.find(m => m.id === slotMachineId);
+    const machinePosition = machine ? { x: machine.x, y: machine.y } : { x: 0, y: 0 };
+    
     // Broadcast spin completion to all players
     io.emit('slotMachineSpinComplete', {
         slotMachineId: slotMachineId,
         result: result
     });
+    
+    // Broadcast appropriate audio event based on result
+    if (result.win) {
+        io.emit('playSpatialAudio', {
+            sound: 'winning', // Will need to add this audio file
+            position: machinePosition,
+            source: 'slotMachine'
+        });
+    } else {
+        io.emit('playSpatialAudio', {
+            sound: 'awdangit',
+            position: machinePosition,
+            source: 'slotMachine'
+        });
+    }
 });
 
 // Handle client connections
@@ -64,6 +83,10 @@ io.on('connection', (socket) => {
         
         if (result.success) {
             if (result.spinning) {
+                // Get slot machine position for spatial audio
+                const machine = gameManager.slotMachines.find(m => m.id === data.slotMachineId);
+                const machinePosition = machine ? { x: machine.x, y: machine.y } : { x: 0, y: 0 };
+                
                 // Machine started spinning
                 socket.emit('slotMachineSpinStarted', {
                     slotMachineId: data.slotMachineId,
@@ -80,6 +103,13 @@ io.on('connection', (socket) => {
                 io.emit('playerBalanceUpdate', {
                     playerId: socket.id,
                     newBalance: result.newBalance
+                });
+                
+                // Play "letsgo" sound for everyone
+                io.emit('playSpatialAudio', {
+                    sound: 'letsgo',
+                    position: machinePosition,
+                    source: 'slotMachine'
                 });
             } else if (result.claimed) {
                 // Player claimed a result

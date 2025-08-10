@@ -56,13 +56,15 @@ class SlotMachineSprite extends Phaser.Physics.Arcade.Sprite {
         
         // Create spinning symbols display
         this.symbolsText = scene.add.text(this.x, this.y - 5, '', {
-            fontSize: '10px',
+            fontSize: '6px',
             fill: '#ffffff',
             align: 'center',
+            // wordWrap: { width: 36, useAdvancedWrap: true },
             stroke: '#000000',
             strokeThickness: 1
         });
         this.symbolsText.setOrigin(0.5, 0.5);
+        this.symbolsText.setFixedSize(36, 12);
         this.symbolsText.setVisible(false);
         
         // Create cost display
@@ -110,11 +112,12 @@ class SlotMachineSprite extends Phaser.Physics.Arcade.Sprite {
         graphics.fillRect(17, 17, 30, 20);
         
         // Add coins symbol
-        graphics.fillStyle(0xf1c40f);
-        graphics.fillCircle(24, 27, 3);
-        graphics.fillCircle(32, 27, 3);
-        graphics.fillCircle(40, 27, 3);
-        
+        if (textureKey.includes("available")) {
+          graphics.fillStyle(0xf1c40f);
+          graphics.fillCircle(24, 27, 3);
+          graphics.fillCircle(32, 27, 3);
+          graphics.fillCircle(40, 27, 3);
+        }
         // Add handle
         graphics.lineStyle(3, 0x95a5a6);
         graphics.beginPath();
