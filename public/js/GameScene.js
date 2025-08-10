@@ -571,12 +571,32 @@ class GameScene extends Phaser.Scene {
     }
 
     updateBalanceDisplay() {
+        // Safety check - ensure DOM elements are loaded
+        if (!this.balanceDisplay) {
+            this.balanceDisplay = document.getElementById('balance-display');
+        }
+        
+        if (!this.balanceDisplay) {
+            console.warn('Balance display element not found, skipping update');
+            return;
+        }
+        
         const balanceColor = this.balance < 0 ? '#e74c3c' : '#ffffff'; // Red for negative, white for positive
         this.balanceDisplay.innerHTML = `Balance: <span style="color: ${balanceColor}; font-weight: ${this.balance < 0 ? 'bold' : 'normal'};">$${this.balance}</span>`;
         this.updateLeaderboard();
     }
 
     updateLeaderboard() {
+        // Safety check - ensure DOM elements are loaded
+        if (!this.leaderboardList) {
+            this.leaderboardList = document.getElementById('leaderboard-list');
+        }
+        
+        if (!this.leaderboardList) {
+            console.warn('Leaderboard list element not found, skipping update');
+            return;
+        }
+        
         // Collect all player data including balances
         const playerList = [];
         
